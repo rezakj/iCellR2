@@ -6,6 +6,21 @@ Supports scRNA-seq, scATAC-seq, multiome, scVDJ-seq, CITE-seq/ADT, Visium, Xeniu
 
 Python companion: **[iCellPy](https://github.com/rezakj/iCellPy)** (same SODA layout; mix R and Python on one archive).
 
+## Install
+
+From CRAN:
+
+```r
+install.packages("iCellR2")
+```
+
+Or from GitHub:
+
+```r
+# install.packages("remotes")  # if needed
+remotes::install_github("rezakj/iCellR2")
+```
+
 ## Quick start
 
 ```r
