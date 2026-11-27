@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Gene model</title>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<script>window.GENE_MODEL = __IC2_GENE_MODEL_JSON__;</script>
+<style>
+*{box-sizing:border-box}
+:root{
+  --ink:#14242A; --mute:#5A6B72; --line:#E5E7EB; --soft:#F8FAFC;
+  --teal:#0F766E; --teal-soft:#ECFDF5; --mito:#BE123C; --pca:#0F766E;
+}
+body{margin:0;background:#fff;color:var(--ink);font-family:"Avenir Next","Segoe UI","Helvetica Neue",Arial,sans-serif}
+.wrap{max-width:1240px;margin:0 auto;padding:20px 16px 48px}
+h1{margin:0;font-size:22px;letter-spacing:-.02em}
+.lede{color:var(--mute);font-size:13.5px;line-height:1.45;margin:6px 0 14px;max-width:78ch}
+.pca-banner{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 14px;padding:10px 12px;border-radius:12px;background:var(--teal-soft);border:1px solid #99F6E4;font-size:13px;line-height:1.4;color:#134E4A}
+.pca-banner .badge{appearance:none;border:0;background:var(--teal);color:#ECFEFF;border-radius:999px;padding:3px 9px;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+.layout{display:grid;grid-template-columns:300px 1fr;gap:12px}
+.panel,.card{border:1px solid var(--line);border-radius:14px;background:#fff}
+.panel{padding:12px}
+.card{padding:10px 12px 12px;min-width:0}
+.panel h2{margin:0 0 8px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute)}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.stat{border:1px solid var(--line);border-radius:12px;padding:10px 10px 8px;background:var(--soft)}
+.stat.big{grid-column:1/-1;background:var(--teal-soft);border-color:#99F6E4}
+.stat .k{font-size:11px;color:var(--mute);letter-spacing:.04em;text-transform:uppercase}
+.stat .v{font-size:22px;font-weight:700;margin-top:2px;font-variant-numeric:tabular-nums}
+.stat.big .v{color:var(--teal);font-size:28px}
+.ctrl{margin:0 0 14px}
+.ctrl label{display:flex;justify-content:space-between;align-items:baseline;font-size:12.5px;font-weight:600;margin-bottom:6px}
+.ctrl label span.val{font-variant-numeric:tabular-nums;color:var(--teal)}
+.ctrl input[type=range]{width:100%;accent-color:var(--teal)}
+.hint{font-size:11.5px;color:var(--mute);line-height:1.35;margin:4px 0 0}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 12px}
+.chip{appearance:none;border:1px solid #D1D5DB;background:#fff;border-radius:999px;padding:5px 10px;font:inherit;font-size:12px;font-weight:600;cursor:pointer}
+.chip.active{background:var(--teal);border-color:var(--teal);color:#ECFEFF}
+.mode{display:grid;gap:6px;margin-bottom:12px}
+.mode button{appearance:none;text-align:left;border:1px solid #D1D5DB;background:var(--soft);border-radius:10px;padding:8px 10px;font:inherit;cursor:pointer;position:relative}
+.mode button.active{border-color:var(--teal);background:var(--teal-soft);box-shadow:inset 0 0 0 1px var(--teal)}
+.mode .name{display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700}
+.mode .desc{display:block;font-size:11.5px;color:var(--mute);margin-top:2px;line-height:1.3}
+.mode .pca-pill{display:none;background:var(--teal);color:#ECFEFF;border-radius:999px;padding:2px 7px;font-size:10px;font-weight:700;letter-spacing:.03em;text-transform:uppercase}
+.mode button.pca-used .pca-pill{display:inline-block}
+.card-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px}
+.card-head h2{margin:0;font-size:14px;font-weight:700}
+.dl{appearance:none;border:1px solid #D1D5DB;background:var(--soft);border-radius:8px;padding:5px 9px;font:inherit;font-size:11.5px;font-weight:600;cursor:pointer}
+.dl:hover{border-color:var(--teal);color:var(--teal)}
+.dl-group{display:flex;gap:6px}
+.meta{font-size:12px;color:var(--mute);margin:0 0 6px}
+#plot{width:100%;height:560px}
+.gene-box{margin-top:10px;border-top:1px solid var(--line);padding-top:10px}
+.gene-box h3{margin:0 0 6px;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute)}
+#gene-list{max-height:120px;overflow:auto;font-size:12px;line-height:1.45;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;word-break:break-word}
+.hidden{display:none !important}
+@media(max-width:960px){.layout{grid-template-columns:1fr}#plot{height:460px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Gene model</h1>
+  <p class="lede">
+    Classic iCellR (n cells × dispersion) is the default gate used for PCA.
+    Switch to mean × dispersion to explore an alternate view — drag gates or use the sliders.
+  </p>
+  <div class="pca-banner" id="pca-banner">
+    <span class="badge">PCA</span>
+    <span id="pca-banner-text">Classic iCellR gate is used for the gene model / PCA feature set.</span>
+  </div>
+
+  <div class="layout">
+    <aside class="panel">
+      <h2>Selected</h2>
+      <div class="stat-grid">
+        <div class="stat big"><div class="k">Genes in model</div><div class="v" id="n-sel">—</div></div>
+        <div class="stat"><div class="k">Passing gate</div><div class="v" id="n-pass">—</div></div>
+        <div class="stat"><div class="k">Mito in model</div><div class="v" id="n-mito">—</div></div>
+        <div class="stat"><div class="k">Shown</div><div class="v" id="n-shown">—</div></div>
+        <div class="stat"><div class="k">Total genes</div><div class="v" id="n-all">—</div></div>
+      </div>
+
+      <h2>Gate mode</h2>
+      <div class="mode" id="modes">
+        <button type="button" class="active pca-used" data-mode="classic">
+          <span class="name">Classic iCellR <span class="pca-pill">Used for PCA</span></span>
+          <span class="desc">Rank → cell-count cut + dispersion. Default for PCA.</span>
+        </button>
+        <button type="button" data-mode="mean">
+          <span class="name">Mean × dispersion <span class="pca-pill">Used for PCA</span></span>
+          <span class="desc">Explore mean (x) and dispersion (y).</span>
+        </button>
+      </div>
+
+      <div class="ctrl">
+        <label>Dispersion ≥ <span class="val" id="disp-val">1.50</span></label>
+        <input id="disp" type="range" min="0.1" max="8" step="0.05" value="1.5"/>
+        <p class="hint">Horizontal line — drag on plot.</p>
+      </div>
+
+      <div class="ctrl hidden" id="ctrl-mean">
+        <label>Mean expression ≥ <span class="val" id="mean-val">0.41</span></label>
+        <input id="mean" type="range" min="0" max="20" step="0.05" value="0.41"/>
+        <p class="hint">Vertical line on log2(mean+1).</p>
+      </div>
+
+      <div class="ctrl" id="ctrl-rank">
+        <label>base.mean.rank <span class="val" id="rank-val">500</span></label>
+        <input id="rank" type="range" min="50" max="3000" step="10" value="500"/>
+        <p class="hint">Sets cell-count cut from top mean genes.</p>
+      </div>
+
+      <div class="ctrl">
+        <label>gene.num.max <span class="val" id="max-val">2000</span></label>
+        <input id="gmax" type="range" min="100" max="5000" step="50" value="2000"/>
+        <p class="hint">Keep top genes by dispersion after the gate.</p>
+      </div>
+
+      <h2>Options</h2>
+      <div class="chips">
+        <button class="chip active" type="button" data-opt="noMito">Exclude mito</button>
+        <button class="chip" type="button" data-opt="markMito">Mark mito</button>
+      </div>
+      <button class="chip" type="button" id="reset">Reset defaults</button>
+    </aside>
+
+    <section class="card">
+      <div class="card-head">
+        <h2 id="view-title">Classic iCellR · used for PCA</h2>
+        <div class="dl-group">
+          <button class="dl" type="button" id="dl-png">PNG</button>
+          <button class="dl" type="button" id="dl-svg">SVG</button>
+          <button class="dl" type="button" id="dl-genes">Copy genes</button>
+        </div>
+      </div>
+      <p class="meta" id="meta"></p>
+      <div id="plot"></div>
+      <div class="gene-box">
+        <h3>Selected genes <span id="gene-n"></span></h3>
+        <div id="gene-list"></div>
+      </div>
+    </section>
+  </div>
+</div>
+<script>
+(function(){
+  const D=window.GENE_MODEL;
+  if(!D||!D.genes){
+    document.getElementById("meta").textContent="Failed to load gene_model_data.js";
+    return;
+  }
+
+  const INK="#14242A", MUTE="#5A6B72";
+  const COL={pass:"#0F766E", fail:"#94A3B8", mito:"#BE123C", lineDisp:"#0F766E", lineMean:"#0E7490", lineRank:"#BE123C"};
+
+  const G=D.genes, n=G.length;
+  const name=new Array(n), me=new Float64Array(n), lm=new Float64Array(n),
+        d=new Float64Array(n), yd=new Float64Array(n), nc=new Float64Array(n),
+        lnc=new Float64Array(n), mito=new Uint8Array(n);
+  for(let i=0;i<n;i++){
+    const g=G[i];
+    name[i]=g.g; me[i]=+g.me; lm[i]=+g.lm; d[i]=+g.d;
+    yd[i]=Math.log1p(Math.max(0,d[i])); nc[i]=+g.nc; lnc[i]=+g.lnc;
+    mito[i]=g.mito?1:0;
+  }
+  const meanOrder=Array.from({length:n},(_,i)=>i).sort((a,b)=>me[b]-me[a]);
+
+  const T0=D.thresholds||{};
+  const pcaMode=(T0.gate_mode==="mean")?"mean":"classic";
+  let mode=pcaMode; // open on the gate used for PCA
+  let dispLimit=+T0.dispersion_limit||1.5;
+  let meanCut=+T0.mean_limit;
+  if(!isFinite(meanCut)) meanCut=Math.pow(2,0.5)-1;
+  let rankCut=+T0.base_mean_rank||500;
+  let geneMax=+T0.gene_num_max||2000;
+  let noMito=T0.no_mito!==false;
+  let markMito=!!T0.mark_mito;
+  let selectedIdx=[];
+  let ready=false, bound=false, suppressRelayout=false;
+
+  const gd=document.getElementById("plot");
+  const el={
+    disp:document.getElementById("disp"),
+    mean:document.getElementById("mean"),
+    rank:document.getElementById("rank"),
+    gmax:document.getElementById("gmax"),
+    dispVal:document.getElementById("disp-val"),
+    meanVal:document.getElementById("mean-val"),
+    rankVal:document.getElementById("rank-val"),
+    maxVal:document.getElementById("max-val"),
+    ctrlMean:document.getElementById("ctrl-mean"),
+    ctrlRank:document.getElementById("ctrl-rank"),
+    meta:document.getElementById("meta"),
+    list:document.getElementById("gene-list"),
+    geneN:document.getElementById("gene-n")
+  };
+
+  function fmt(x,p){ return (+x).toFixed(p); }
+
+  function syncInputs(){
+    el.disp.value=dispLimit; el.dispVal.textContent=fmt(dispLimit,2);
+    el.mean.value=meanCut; el.meanVal.textContent=fmt(meanCut,2);
+    el.rank.value=rankCut; el.rankVal.textContent=String(rankCut);
+    el.gmax.value=geneMax; el.maxVal.textContent=String(geneMax);
+    el.ctrlMean.classList.toggle("hidden", mode!=="mean");
+    el.ctrlRank.classList.toggle("hidden", mode!=="classic");
+    const isPcaView = mode===pcaMode;
+    document.getElementById("view-title").textContent =
+      mode==="mean"
+        ? (isPcaView ? "Mean × dispersion · used for PCA" : "Mean × dispersion")
+        : (isPcaView ? "Classic iCellR · used for PCA" : "Classic iCellR (n cells × dispersion)");
+    const banner = document.getElementById("pca-banner-text");
+    if(banner){
+      banner.textContent = pcaMode==="classic"
+        ? "Classic iCellR gate is used for the gene model / PCA feature set."
+        : "Mean × dispersion gate is used for the gene model / PCA feature set.";
+    }
+  }
+
+  function cellCountLimitFromRank(r){
+    const k=Math.min(Math.max(1,r|0), n);
+    return nc[meanOrder[k-1]];
+  }
+
+  // Fast path: count only (no sort / no gene list) — used while dragging.
+  function countPass(){
+    let pass=0, keep=0, mitoKeep=0;
+    let cLim=null;
+    if(mode==="mean"){
+      for(let i=0;i<n;i++){
+        if(d[i]<dispLimit || me[i]<meanCut) continue;
+        pass++;
+        if(noMito && mito[i]) continue;
+        keep++;
+        if(mito[i]) mitoKeep++;
+      }
+    } else {
+      cLim=cellCountLimitFromRank(rankCut);
+      for(let i=0;i<n;i++){
+        if(!(nc[i]>cLim || (d[i]>dispLimit && nc[i]<cLim))) continue;
+        pass++;
+        if(noMito && mito[i]) continue;
+        keep++;
+        if(mito[i]) mitoKeep++;
+      }
+    }
+    const capped=Math.min(keep, geneMax);
+    document.getElementById("n-sel").textContent=capped.toLocaleString();
+    document.getElementById("n-pass").textContent=pass.toLocaleString();
+    document.getElementById("n-mito").textContent=Math.min(mitoKeep, geneMax).toLocaleString();
+    document.getElementById("n-shown").textContent=n.toLocaleString();
+    document.getElementById("n-all").textContent=(D.n_all||n).toLocaleString();
+    el.meta.textContent = mode==="mean"
+      ? ("dispersion ≥ "+fmt(dispLimit,2)+" · mean ≥ "+fmt(meanCut,2)+" · max "+geneMax+(noMito?" · mito excluded":""))
+      : ("dispersion ≥ "+fmt(dispLimit,2)+" · base.mean.rank "+rankCut+" · cell-count cut "+Math.round(cLim)+" · max "+geneMax+(noMito?" · mito excluded":""));
+    return {cLim, capped};
+  }
+
+  function computeFull(){
+    const pass=[];
+    let cLim=null;
+    if(mode==="mean"){
+      for(let i=0;i<n;i++) if(d[i]>=dispLimit && me[i]>=meanCut) pass.push(i);
+    } else {
+      cLim=cellCountLimitFromRank(rankCut);
+      for(let i=0;i<n;i++){
+        if(nc[i]>cLim || (d[i]>dispLimit && nc[i]<cLim)) pass.push(i);
+      }
+    }
+    let filt=noMito ? pass.filter(i=>!mito[i]) : pass.slice();
+    filt.sort((a,b)=>d[b]-d[a]);
+    selectedIdx=filt.slice(0, geneMax);
+    countPass();
+    const show=selectedIdx.slice(0,200).map(i=>name[i]);
+    el.geneN.textContent="("+selectedIdx.length+")";
+    el.list.textContent=show.join(", ")+(selectedIdx.length>200?" …":"");
+    return {cLim};
+  }
+
+  function gateShapes(cLim){
+    const yCut=Math.log1p(Math.max(0,dispLimit));
+    const shapes=[{
+      type:"line", editable:true,
+      y0:yCut, y1:yCut, x0:0, x1:1, xref:"paper",
+      line:{color:COL.lineDisp, width:2, dash:"dot"}
+    }];
+    if(mode==="mean"){
+      const xCut=Math.log2(Math.max(meanCut,0)+1);
+      shapes.push({
+        type:"line", editable:true,
+        x0:xCut, x1:xCut, y0:0, y1:1, yref:"paper",
+        line:{color:COL.lineMean, width:2, dash:"dot"}
+      });
+    } else {
+      const xCut=Math.log2(Math.max(cLim||1,1));
+      shapes.push({
+        type:"line", editable:true,
+        x0:xCut, x1:xCut, y0:0, y1:1, yref:"paper",
+        line:{color:COL.lineRank, width:2, dash:"dot"}
+      });
+    }
+    return shapes;
+  }
+
+  function ax(title){
+    return {
+      title:{text:title, font:{size:12, color:MUTE}},
+      tickfont:{color:MUTE, size:10},
+      showgrid:false, zeroline:false,
+      showline:true, linecolor:INK, linewidth:1.15,
+      ticks:"outside", color:INK
+    };
+  }
+
+  function layout(shapes){
+    return {
+      paper_bgcolor:"#fff", plot_bgcolor:"#fff",
+      font:{family:"Avenir Next, Segoe UI, Helvetica Neue, Arial, sans-serif", color:INK},
+      margin:{l:62,r:16,t:36,b:52},
+      title:false, showlegend:true,
+      legend:{orientation:"h", y:1.02, yanchor:"bottom", x:0, font:{size:11, color:MUTE}, bgcolor:"rgba(0,0,0,0)"},
+      xaxis:Object.assign({}, ax(mode==="mean"?"log2(mean expression + 1)":"log2(n cells + 1)")),
+      yaxis:Object.assign({}, ax("log1p(dispersion)")),
+      shapes:shapes, dragmode:"pan", hovermode:"closest"
+    };
+  }
+
+  function packSelected(){
+    const xArr=mode==="mean"?lm:lnc;
+    const xs=new Array(selectedIdx.length), ys=new Array(selectedIdx.length), ts=new Array(selectedIdx.length);
+    for(let k=0;k<selectedIdx.length;k++){
+      const i=selectedIdx[k];
+      xs[k]=xArr[i]; ys[k]=yd[i]; ts[k]=name[i];
+    }
+    return {xs, ys, ts};
+  }
+
+  function packMito(){
+    const xArr=mode==="mean"?lm:lnc;
+    const xs=[], ys=[], ts=[];
+    for(let i=0;i<n;i++) if(mito[i]){ xs.push(xArr[i]); ys.push(yd[i]); ts.push(name[i]); }
+    return {xs, ys, ts};
+  }
+
+  // Background stays fixed; only the selected overlay is updated (fast).
+  function buildTraces(){
+    const x=mode==="mean"?lm:lnc;
+    const sel=packSelected();
+    const traces=[
+      {
+        type:"scattergl", mode:"markers", name:"other",
+        x:Array.from(x), y:Array.from(yd), text:name,
+        customdata:Array.from({length:n},(_,i)=>[d[i], me[i], nc[i]]),
+        marker:{size:3, color:COL.fail, opacity:0.25, line:{width:0}},
+        hovertemplate:"%{text}<br>dispersion=%{customdata[0]:.3g}<br>mean=%{customdata[1]:.3g}<br>n cells=%{customdata[2]:.0f}<extra></extra>",
+        showlegend:true
+      },
+      {
+        type:"scattergl", mode:"markers", name:"selected",
+        x:sel.xs, y:sel.ys, text:sel.ts,
+        marker:{size:5.5, color:COL.pass, opacity:0.9, line:{width:0}},
+        hovertemplate:"%{text}<extra>selected</extra>",
+        showlegend:true
+      }
+    ];
+    if(markMito){
+      const m=packMito();
+      traces.push({
+        type:"scattergl", mode:"markers", name:"mito",
+        x:m.xs, y:m.ys, text:m.ts,
+        marker:{size:7, color:COL.mito, opacity:0.95, line:{width:0}},
+        hovertemplate:"%{text}<extra>mito</extra>",
+        showlegend:true
+      });
+    }
+    return traces;
+  }
+
+  const cfg={
+    responsive:true, displaylogo:false, edits:{shapePosition:true},
+    modeBarButtonsToRemove:["lasso2d","select2d"],
+    toImageButtonOptions:{format:"png", filename:"gene_model_mean", height:900, width:1100, scale:2}
+  };
+
+  let paintTimer=null;
+  function schedulePaint(){
+    if(paintTimer) clearTimeout(paintTimer);
+    paintTimer=setTimeout(paintSelected, 60);
+  }
+
+  function paintSelected(){
+    paintTimer=null;
+    computeFull();
+    const sel=packSelected();
+    Plotly.restyle(gd, {x:[sel.xs], y:[sel.ys], text:[sel.ts]}, [1]);
+  }
+
+  function applyThresholdsFromEvent(ev){
+    let changed=false;
+    for(const k of Object.keys(ev)){
+      const m=k.match(/^shapes\[(\d+)\]\.(x0|x1|y0|y1)$/);
+      if(!m) continue;
+      const idx=+m[1], prop=m[2], val=+ev[k];
+      if(!isFinite(val)) continue;
+      if(idx===0 && (prop==="y0"||prop==="y1")){
+        dispLimit=Math.max(0.05, Math.expm1(val));
+        changed=true;
+      } else if(idx===1 && (prop==="x0"||prop==="x1")){
+        if(mode==="mean") meanCut=Math.max(0, Math.pow(2,val)-1);
+        else {
+          // Map dragged cell-count cut → nearest rank (binary-ish scan, coarse)
+          const target=Math.max(1, Math.pow(2,val));
+          let lo=50, hi=3000, best=rankCut, bestDiff=Infinity;
+          for(let r=lo;r<=hi;r+=25){
+            const diff=Math.abs(cellCountLimitFromRank(r)-target);
+            if(diff<bestDiff){ bestDiff=diff; best=r; }
+          }
+          rankCut=best;
+        }
+        changed=true;
+      }
+    }
+    return changed;
+  }
+
+  function onRelayout(ev){
+    if(!ready || suppressRelayout || !ev) return;
+    if(!applyThresholdsFromEvent(ev)) return;
+    syncInputs();
+    countPass();       // live counts only
+    schedulePaint();   // debounce marker overlay
+  }
+
+  function fullDraw(){
+    const {cLim}=computeFull();
+    syncInputs();
+    Plotly.react(gd, buildTraces(), layout(gateShapes(cLim)), cfg).then(()=>{
+      ready=true;
+      if(!bound){
+        gd.on("plotly_relayout", onRelayout);
+        bound=true;
+      }
+    });
+  }
+
+  function sliderLive(){
+    syncInputs();
+    countPass();
+    suppressRelayout=true;
+    Plotly.relayout(gd, {shapes:gateShapes(mode==="classic"?cellCountLimitFromRank(rankCut):null)})
+      .finally(()=>{ suppressRelayout=false; });
+    schedulePaint();
+  }
+
+  el.disp.oninput=()=>{ dispLimit=+el.disp.value; sliderLive(); };
+  el.mean.oninput=()=>{ meanCut=+el.mean.value; sliderLive(); };
+  el.rank.oninput=()=>{ rankCut=+el.rank.value; sliderLive(); };
+  el.gmax.oninput=()=>{ geneMax=+el.gmax.value; countPass(); schedulePaint(); };
+
+  document.querySelectorAll("#modes button").forEach(b=>{
+    b.onclick=()=>{
+      mode=b.dataset.mode;
+      document.querySelectorAll("#modes button").forEach(x=>x.classList.toggle("active", x===b));
+      fullDraw();
+    };
+  });
+
+  document.querySelectorAll("[data-opt]").forEach(b=>{
+    b.onclick=()=>{
+      const k=b.dataset.opt;
+      if(k==="noMito"){ noMito=!noMito; b.classList.toggle("active", noMito); countPass(); schedulePaint(); }
+      if(k==="markMito"){ markMito=!markMito; b.classList.toggle("active", markMito); fullDraw(); }
+    };
+  });
+
+  document.querySelectorAll("#modes button").forEach(x=>{
+    x.classList.toggle("active", x.dataset.mode===mode);
+    x.classList.toggle("pca-used", x.dataset.mode===pcaMode);
+  });
+  document.querySelector('[data-opt="noMito"]').classList.toggle("active", noMito);
+  document.querySelector('[data-opt="markMito"]').classList.toggle("active", markMito);
+
+  document.getElementById("reset").onclick=()=>{
+    mode=pcaMode;
+    dispLimit=+T0.dispersion_limit||1.5;
+    meanCut=+T0.mean_limit; if(!isFinite(meanCut)) meanCut=Math.pow(2,0.5)-1;
+    rankCut=+T0.base_mean_rank||500;
+    geneMax=+T0.gene_num_max||2000;
+    noMito=T0.no_mito!==false; markMito=!!T0.mark_mito;
+    document.querySelectorAll("#modes button").forEach(x=>{
+      x.classList.toggle("active", x.dataset.mode===mode);
+      x.classList.toggle("pca-used", x.dataset.mode===pcaMode);
+    });
+    document.querySelector('[data-opt="noMito"]').classList.toggle("active", noMito);
+    document.querySelector('[data-opt="markMito"]').classList.toggle("active", markMito);
+    fullDraw();
+  };
+
+  document.getElementById("dl-png").onclick=()=>Plotly.downloadImage(gd,{format:"png",width:1200,height:900,scale:2,filename:"gene_model_mean"});
+  document.getElementById("dl-svg").onclick=()=>Plotly.downloadImage(gd,{format:"svg",width:1200,height:900,filename:"gene_model_mean"});
+  document.getElementById("dl-genes").onclick=()=>{
+    navigator.clipboard.writeText(selectedIdx.map(i=>name[i]).join("\n")).then(()=>{
+      const b=document.getElementById("dl-genes");
+      const old=b.textContent; b.textContent="Copied"; setTimeout(()=>b.textContent=old,900);
+    });
+  };
+
+  fullDraw();
+})();
+</script>
+</body>
+</html>

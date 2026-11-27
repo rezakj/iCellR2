@@ -1,0 +1,239 @@
+# SODA architecture — Single Omics Data Archive (iCellR2)
+#
+# This file documents the on-disk layout of a `*.soda` directory and how it
+# maps to iCellR2 S4 slots. Matrices stay on disk (HDF5 CSC); the S4 object
+# is handle-only.
+#
+# Legend
+#   [impl]     written by current iCellR2 tools
+#   [planned]  reserved / schema-ready, not yet populated by default tools
+#   .json      nested metadata (language-neutral)
+#   .tsv       portable tables (Python / R / Excel) — text tables
+#   .info      small key–value twin of soda.json (human skim)
+#   .h5        HDF5 sparse CSC assay or dense embeddings
+#   .parquet   optional tabular interchange (when arrow is available)
+#   .txt/.log  plain-text logs / benchmarks
+#   .uwot      UMAP models via uwot::save_uwot
+#   .html/.png optional plots (often written next to the archive, or plots/)
+#
+# ALLOWED formats in a SODA archive:
+#   .json .h5 .hdf5 .parquet .tsv .txt .log .info .uwot
+#   (+ optional plot exports .html/.png under plots/)
+# FORBIDDEN: .rds (legacy readable once, then removed)
+#
+# Copy shipped with the package: inst/soda/architecture.txt
+# Also copied into each archive root as architecture.txt
+
+================================================================================
+ON-DISK TREE  (<project>.soda/)
+================================================================================
+
+<project>.soda/                                          [impl]
+│
+├── soda.json                                            [impl]  archive manifest (JSON)
+├── soda.info                                            [impl]  key–value twin of soda.json
+├── architecture.txt                                     [impl]  this file
+├── benchmark.txt                                        [impl]  wall / CPU / RAM KPIs
+├── iCellR2.log                                          [impl]  tool run log
+│
+├── metadata/                                            [impl]
+│   ├── project_info.json                                [impl]  → slot project_info
+│   │     fields: project_id, project_name, description,
+│   │             organism, genome_build, technologies,
+│   │             date_created, package_version, …
+│   ├── sample_data.tsv                                  [impl]  → slot samples / sample_data
+│   │     columns: sample_id, donor_id, batch_id,
+│   │              condition_id, tissue, platform,
+│   │              modality, misc, …
+│   ├── cell_data.tsv                                    [impl]  → slot cell_data
+│   │     columns: cell_id, barcode, sample_id, donor_id,
+│   │              batch_id, condition_id, entity_type,
+│   │              nGenes, UMIs, mito.percent,
+│   │              S.phase.probability, g2m.phase.probability,
+│   │              cluster_id, annotations…, misc…
+│   ├── cell_maps.tsv                                    [impl]  cell ↔ sample mapping
+│   ├── feature_maps.tsv                                 [impl]  feature ↔ modality mapping
+│   ├── <modality>_feature_data.tsv                      [impl]  e.g. rna_feature_data.tsv
+│   │     columns: feature_id, feature_name, feature_type,
+│   │              chromosome, start, end, strand, misc…
+│   ├── <modality>_gene_stats.tsv                        [impl]  gene.stats() output
+│   ├── <modality>_gene_model.tsv                        [impl]  make.gene.model() HVG list
+│   ├── params.json                                      [impl]  → slot params
+│   │     import, qc, normalization, feature_selection,
+│   │     dimensionality_reduction, graph_construction,
+│   │     clustering, integration, visualization, misc
+│   ├── commands.json                                    [impl]  → slot commands
+│   │     command_log, timestamps, arguments, outputs
+│   ├── version.json                                     [impl]  → slot version
+│   │     object_version, schema_version, package_version
+│   ├── session_stats.json                               [impl]  progress / RAM session
+│   └── clustering/                                      [impl]
+│         ├── clustering.json
+│         ├── <modality>_cluster_id.tsv
+│         └── <modality>_clust_avg.tsv                   [impl]  optional clust.avg.exp()
+│
+├── modalities/                                          [impl]
+│   └── <modality>/                                      [impl]  e.g. rna / atac / adt …
+│         ├── assays/
+│         │   ├── counts/                                [impl]
+│         │   │   ├── <sample_id>/<sample_id>.h5         [impl]  CSC HDF5 (virtual multi-sample)
+│         │   │   ├── <sample_id>/tenx_meta.json         [impl]  optional 10x pointer meta
+│         │   │   ├── <sample_id>/tenx_pointer.json      [impl]  external 10x pointer (copy.raw=FALSE)
+│         │   │   └── assay_source.h5                    [impl]  single-file / merged assay
+│         │   ├── data/                                  [impl]  normalized (norm.data)
+│         │   │   ├── assay_source.h5                    [impl]
+│         │   │   └── size_factors.tsv                   [impl]
+│         │   ├── scale.data/                            [impl]  optional data.scale()
+│         │   └── <layer>/                               [planned]  custom layers
+│         ├── filters/
+│         │   └── kept_cell_ids.tsv                      [impl]  cell.filter()
+│         ├── sketches/                                  [impl]  run.sketch() outputs
+│         ├── graphs/                                    [planned]  knn / snn / cluster_graphs
+│         ├── markers/                                   [planned]  findMarkers tables
+│         ├── models/                                    [planned]
+│         ├── params/                                    [planned]  modality-local params
+│         └── misc/                                      [planned]
+│
+├── reductions/                                          [impl]  → slots reductions /
+│   │                                                            modalities[[mod]]$reductions
+│   └── <name>/                                          [impl]  pca, umap, cgpca, cgumap, …
+│         ├── reduction.json                             [impl]  dims, method, modality, …
+│         ├── cell_embeddings.h5                         [impl]  cells × dims
+│         ├── feature_loadings.h5                        [impl]  optional (PCA)
+│         └── stdev.tsv                                  [impl]  optional
+│
+├── graphs/                                              [planned]  integrated / global graphs
+│   ├── integrated_knn, integrated_snn, wnn, …
+│
+├── multimodal/                                          [impl]  RNA+ADT / RNA+ATAC joint results
+│   ├── rna_atac/, rna_adt/, multiome/, …
+│   │     multimodal.json, joint_pca/, …
+│
+├── images/                                              [planned]  spatial / visium / xenium
+├── molecules/                                           [planned]
+├── segments/                                            [planned]
+├── indexes/                                             [planned]  chunk / feature indexes
+├── cache/                                               [impl]    scratch (safe to delete)
+└── plots/                                               [impl]    optional tool exports
+
+================================================================================
+ASSAY HDF5 LAYOUT  (backend = hdf5_sparse / CSC)
+================================================================================
+
+<assay>.h5
+└── counts/                     (or configured group name)
+      ├── data                  numeric non-zeros
+      ├── indices               0-based row indices
+      ├── indptr                CSC column pointers
+      ├── shape                 [n_features, n_cells]
+      ├── feature_ids           (optional) gene / peak ids
+      └── cell_ids              (optional) cell barcodes
+
+Virtual multi-sample assays keep one H5 per sample under
+  modalities/<mod>/assays/<assay>/<sample_id>/<sample_id>.h5
+and a virtual handle in the S4 object (no mega-merge by default).
+
+================================================================================
+S4 OBJECT  (handle-only)  ↔  SODA
+================================================================================
+
+iCellR2
+├── project_info          ←  metadata/project_info.json
+├── samples               ←  metadata/sample_data.tsv
+├── cell_data             ←  metadata/cell_data.tsv
+├── modalities
+│   └── <mod>
+│         ├── assays$*    ←  modalities/<mod>/assays/<name>/*.h5  (handles only)
+│         ├── active_assay
+│         ├── feature_data←  metadata/<mod>_feature_data.tsv
+│         ├── reductions  ←  reductions/<name>/  (paths + light metadata)
+│         ├── gene.data   ←  metadata/<mod>_gene_stats.*
+│         ├── gene.model  ←  metadata/<mod>_gene_model.*
+│         ├── sketches    ←  modalities/<mod>/sketches/
+│         ├── graphs      ←  [planned]
+│         ├── markers     ←  [planned]
+│         └── misc
+├── multimodal            ←  multimodal/  [impl]
+├── reductions            ←  often mirrored under modalities; top-level paths in storage
+├── graphs                ←  graphs/  [planned]
+├── storage
+│   ├── root_dir          ←  path to this *.soda
+│   ├── backend           ←  "hdf5_sparse" (default)
+│   ├── modality_paths
+│   ├── metadata_paths
+│   ├── reduction_paths
+│   ├── graph_paths
+│   ├── image_paths
+│   ├── molecule_paths
+│   ├── segment_paths
+│   ├── chunk_index
+│   ├── cache
+│   └── compression
+├── commands              ←  metadata/commands.json
+├── params                ←  metadata/params.json
+├── version               ←  metadata/version.json
+├── misc                  ←  in-memory / optional RDS under metadata/
+└── validity              ←  [planned] valid / checked / messages / schema_notes
+
+================================================================================
+MODALITY SCHEMAS  (conceptual; folders under modalities/)
+================================================================================
+
+rna/          [impl]
+  assays: counts, data (normalized), scale.data, layers…
+  feature_data: feature_id, feature_name, feature_type, chromosome, start, end, strand
+  reductions: pca, umap, tsne, cgmap/cgpca/cgumap, knetl, projected_umap…
+  graphs / sketches / markers / models / params / misc
+
+atac/         [impl]
+  assays: counts, tfidf, gene.activity
+  merge.peaks first: one chr_start_end set when samples disagree
+  add.atac, norm.atac, gene.activity, add.multiome, atac.rna.merge
+  reductions: pca (modalities/atac/reductions/pca), umap
+  RNA reductions/pca is never replaced. Joint map is multimodal/rna_atac.
+  motifs: motif_matrix, motif_annotations, chromvar_scores
+  peaks / sketches / params / misc
+
+adt/          [impl]
+  assays: counts, data (per-cell CLR), layers…
+  feature_data: feature_id, feature_name, feature_type
+
+vdj/          [planned]
+  contigs, clonotypes, chains, repertoire, feature_data
+
+spatial/ | visium/ | xenium/   [planned]
+  assays + coordinates, images, scalefactors, segments / spots / polygons, molecules
+
+proteomics/   [planned]
+  assays: intensities, normalized, layers…
+  feature_data: protein_id, protein_name, peptide_count
+
+misc_modalities/  [planned]
+
+================================================================================
+MULTIMODAL / GLOBAL REDUCTIONS / GRAPHS
+================================================================================
+
+multimodal/
+  rna_atac, rna_adt, rna_spatial, rna_visium, rna_xenium, multiome, misc
+    └── multimodal.json, joint_pca/cell_embeddings.h5
+  Batch alignment is reductions/aligned_pca, not this folder.
+
+reductions/   (also used for modality-local today)
+  integrated_pca, integrated_umap, integrated_tsne, integrated_knetl, misc
+
+graphs/
+  integrated_knn, integrated_snn, wnn, misc
+
+================================================================================
+NOTES
+================================================================================
+
+1. No .rds in SODA. Write .json / .tsv / .h5 / .parquet / .txt|.log|.info (.uwot for UMAP).
+   Legacy .rds is readable once for migration, then removed.
+2. Assays are never densified into the S4 object; stream via assay handles.
+3. `soda.info` replaced legacy `soda.tsv` (open.soda still reads .tsv if present).
+4. Plot tools may write HTML/PNG beside the working directory or under plots/;
+   they do not densify assays.
+5. Empty reserved folders (images/, molecules/, segments/, graphs/, …) may exist
+   as placeholders created at make.obj time.

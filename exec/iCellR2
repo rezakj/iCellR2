@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+# iCellR2 — bash front-end (SODA path in, R in the background)
+# Usage: iCellR2 <command> [options]
+#
+# Help style mirrors classic bioinformatics CLIs (bwa / samtools).
+
+set -euo pipefail
+
+if ! command -v Rscript >/dev/null 2>&1; then
+  echo "iCellR2: Rscript not found on PATH. Install R and try again." >&2
+  exit 127
+fi
+
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+export ICELLR2_CLI_HOME="$HERE"
+
+# Load package; if this source tree has a newer R/cli.R than the installed
+# package, source it into a child of the package namespace (dev-friendly).
+exec Rscript --vanilla -e '
+op <- options(warn = -1)
+on.exit(options(op), add = TRUE)
+invisible(loadNamespace("iCellR2"))
+home <- Sys.getenv("ICELLR2_CLI_HOME", "")
+src <- if (nzchar(home)) {
+  normalizePath(file.path(home, "..", "R", "cli.R"), winslash = "/", mustWork = FALSE)
+} else {
+  ""
+}
+ns <- asNamespace("iCellR2")
+run <- NULL
+if (exists(".ic2_cli", envir = ns, inherits = FALSE)) {
+  run <- get(".ic2_cli", envir = ns, inherits = FALSE)
+} else if (nzchar(src) && file.exists(src)) {
+  env <- new.env(parent = ns)
+  if (!exists("%||%", envir = ns, inherits = FALSE)) {
+    assign("%||%", function(a, b) if (!is.null(a)) a else b, envir = env)
+  }
+  sys.source(src, envir = env, keep.source = FALSE)
+  run <- env$.ic2_cli
+}
+if (!is.function(run)) {
+  stop(
+    "iCellR2 CLI not found. Reinstall the package (exec/ + R/cli.R), or run from the source tree.",
+    call. = FALSE
+  )
+}
+options(op)
+run()
+' -- "$@"

@@ -1,0 +1,10 @@
+useDynLib(iCellR2, .registration = TRUE)
+exportPattern("^[[:alpha:]]+")
+importFrom(Rcpp, evalCpp)
+importFrom(stats, ave, setNames)
+import(methods)
+
+export(stats.plot)
+export(qc.dashboard)
+
+S3method(print, pseudotime_arrows_both)
